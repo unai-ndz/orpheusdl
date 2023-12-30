@@ -48,7 +48,8 @@ class Orpheus:
                 "track_filename_format": "{track_number}. {name}",
                 "single_full_path_format": "{name}",
                 "enable_zfill": True,
-                "force_album_format": False
+                "force_album_format": False,
+                "album_in_artist_folder": False
             },
             "codecs": {
                 "proprietary_codecs": False,
