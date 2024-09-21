@@ -97,7 +97,9 @@ class Orpheus:
                 "disable_subscription_checks": False,
                 "enable_undesirable_conversions": False,
                 "ignore_existing_files": False,
-                "ignore_different_artists": True
+                "ignore_different_artists": True,
+                "skip_live_tracks": False,
+                "skip_remix_tracks": False
             }
         }
 

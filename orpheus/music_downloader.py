@@ -3,6 +3,7 @@ import shutil
 import unicodedata
 from dataclasses import asdict
 from time import strftime, gmtime
+import re
 
 from ffmpeg import Error
 
@@ -228,20 +229,27 @@ class Downloader:
             self.print(f'Number of tracks: {number_of_tracks!s}')
             self.print(f'Service: {self.module_settings[self.service_name].service_name}')
 
-            if album_info.booklet_url and not os.path.exists(album_path + 'Booklet.pdf'):
-                self.print('Downloading booklet')
-                download_file(album_info.booklet_url, album_path + 'Booklet.pdf')
-            
             cover_temp_location = download_to_temp(album_info.all_track_cover_jpg_url) if album_info.all_track_cover_jpg_url else ''
 
-            # Download booklet, animated album cover and album cover if present
-            self._download_album_files(album_path, album_info)
-
+            all_tracks_skipped_by_filter = True
             for index, track_id in enumerate(album_info.tracks, start=1):
                 self.set_indent_number(indent_level + 1)
                 print()
                 self.print(f'Track {index}/{number_of_tracks}', drop_level=1)
-                self.download_track(track_id, album_location=album_path, track_index=index, number_of_tracks=number_of_tracks, main_artist=artist_name, cover_temp_location=cover_temp_location, indent_level=indent_level+1, extra_kwargs=album_info.track_extra_kwargs)
+                downloaded = self.download_track(track_id, album_location=album_path, track_index=index, number_of_tracks=number_of_tracks, main_artist=artist_name, cover_temp_location=cover_temp_location, indent_level=indent_level+1, extra_kwargs=album_info.track_extra_kwargs)
+                if downloaded:
+                    all_tracks_skipped_by_filter = False
+
+            if all_tracks_skipped_by_filter:
+                os.rmdir(album_path)
+                return {}  # This gets counted as 0 tracks_downloaded
+
+            if album_info.booklet_url and not os.path.exists(album_path + 'Booklet.pdf'):
+                self.print('Downloading booklet')
+                download_file(album_info.booklet_url, album_path + 'Booklet.pdf')
+
+            # Download booklet, animated album cover and album cover if present
+            self._download_album_files(album_path, album_info)
 
             self.set_indent_number(indent_level)
             self.print(f'=== Album {album_info.name} downloaded ===', drop_level=1)
@@ -296,8 +304,22 @@ class Downloader:
         track_info: TrackInfo = self.service.get_track_info(track_id, quality_tier, codec_options, **extra_kwargs)
         
         if main_artist.lower() not in [i.lower() for i in track_info.artists] and self.global_settings['advanced']['ignore_different_artists'] and self.download_mode is DownloadTypeEnum.artist:
-           self.print('Track is not from the correct artist, skipping', drop_level=1)
-           return
+            self.print('Track is not from the correct artist, skipping', drop_level=1)
+            return
+
+        skip_tracks = self.global_settings['advanced']['skip_live_tracks'] or self.global_settings['advanced']['skip_remix_tracks']
+        if skip_tracks:
+            m = re.search(r'(\([^\(]+?\)$)', track_info.name.lower())
+            if m:
+                match = m.group(1)
+                if self.global_settings['advanced']['skip_live_tracks']:
+                    if m and re.search(r'[^a-z]live', match):
+                        self.print('Track is a live performance, skipping: ' + track_info.name, drop_level=1)
+                        return
+                if self.global_settings['advanced']['skip_remix_tracks']:
+                    if m and re.search(r'[^a-z]remix', match):
+                        self.print('Track is a remix, skipping: ' + track_info.name, drop_level=1)
+                        return
 
         if not self.global_settings['formatting']['force_album_format']:
             if track_index:
@@ -381,7 +403,7 @@ class Downloader:
                 self._add_track_m3u_playlist(m3u_playlist, track_info, track_location)
 
             self.print(f'=== Track {track_id} skipped ===', drop_level=1)
-            return
+            return True
 
         if track_info.description:
             with open(track_location_name + '.txt', 'w', encoding='utf-8') as f: f.write(track_info.description)
@@ -635,6 +657,7 @@ class Downloader:
             silentremove(cover_temp_location)
         
         self.print(f'=== Track {track_id} downloaded ===', drop_level=1)
+        return True
 
     def _get_artwork_settings(self, module_name = None, is_external = False):
         if not module_name:
