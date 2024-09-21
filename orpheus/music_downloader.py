@@ -76,22 +76,22 @@ class Downloader:
         number_of_tracks = len(playlist_info.tracks)
         self.print(f'Number of tracks: {number_of_tracks!s}')
         self.print(f'Service: {self.module_settings[self.service_name].service_name}')
-        
+
         playlist_tags = {k: sanitise_name(v) for k, v in asdict(playlist_info).items()}
         playlist_tags['explicit'] = ' [E]' if playlist_info.explicit else ''
         playlist_path = self.path + self.global_settings['formatting']['playlist_format'].format(**playlist_tags)
         # fix path byte limit
         playlist_path = fix_byte_limit(playlist_path) + '/'
         os.makedirs(playlist_path, exist_ok=True)
-        
+
         if playlist_info.cover_url:
             self.print('Downloading playlist cover')
             download_file(playlist_info.cover_url, f'{playlist_path}cover.{playlist_info.cover_type.name}', artwork_settings=self._get_artwork_settings())
-        
+
         if playlist_info.animated_cover_url and self.global_settings['covers']['save_animated_cover']:
             self.print('Downloading animated playlist cover')
             download_file(playlist_info.animated_cover_url, playlist_path + 'cover.mp4', enable_progress_bar=True)
-        
+
         if playlist_info.description:
             with open(playlist_path + 'description.txt', 'w', encoding='utf-8') as f: f.write(playlist_info.description)
 
@@ -130,12 +130,12 @@ class Downloader:
                     proprietary_codecs = self.global_settings['codecs']['proprietary_codecs'],
                 )
                 track_info: TrackInfo = self.loaded_modules[original_service].get_track_info(track_id, quality_tier, codec_options, **playlist_info.track_extra_kwargs)
-                
+
                 self.service = self.loaded_modules[custom_module]
                 self.service_name = custom_module
                 results = self.search_by_tags(custom_module, track_info)
                 track_id_new = results[0].result_id if len(results) else None
-                
+
                 if track_id_new:
                     self.download_track(track_id_new, album_location=playlist_path, track_index=index, number_of_tracks=number_of_tracks, indent_level=2, m3u_playlist=m3u_playlist_path, extra_kwargs=results[0].extra_kwargs)
                 else:
@@ -216,7 +216,7 @@ class Downloader:
         if number_of_tracks > 1 or self.global_settings['formatting']['force_album_format']:
             # Creates the album_location folders
             album_path = self._create_album_location(path, album_id, album_info)
-        
+
             if self.download_mode is DownloadTypeEnum.album:
                 self.set_indent_number(1)
             elif self.download_mode is DownloadTypeEnum.artist:
@@ -302,7 +302,7 @@ class Downloader:
             proprietary_codecs = self.global_settings['codecs']['proprietary_codecs'],
         )
         track_info: TrackInfo = self.service.get_track_info(track_id, quality_tier, codec_options, **extra_kwargs)
-        
+
         if main_artist.lower() not in [i.lower() for i in track_info.artists] and self.global_settings['advanced']['ignore_different_artists'] and self.download_mode is DownloadTypeEnum.artist:
             self.print('Track is not from the correct artist, skipping', drop_level=1)
             return
@@ -388,7 +388,7 @@ class Downloader:
         except:
             conversions = {}
             self.print('Warning: codec_conversions setting is invalid!')
-        
+
         container = codec_data[codec].container
         track_location = f'{track_location_name}.{container.name}'
 
@@ -442,13 +442,13 @@ class Downloader:
             covers_module_name = covers_module_name if covers_module_name != self.service_name else None
             if covers_module_name: print()
             self.print('Downloading artwork' + ((' with ' + covers_module_name) if covers_module_name else ''))
-            
+
             jpg_cover_options = CoverOptions(file_type=ImageFileTypeEnum.jpg, resolution=self.global_settings['covers']['main_resolution'], \
                 compression=CoverCompressionEnum[self.global_settings['covers']['main_compression'].lower()])
             ext_cover_options = CoverOptions(file_type=ImageFileTypeEnum[self.global_settings['covers']['external_format']], \
                 resolution=self.global_settings['covers']['external_resolution'], \
                 compression=CoverCompressionEnum[self.global_settings['covers']['external_compression'].lower()])
-            
+
             if covers_module_name:
                 default_temp = download_to_temp(track_info.cover_url)
                 test_cover_options = CoverOptions(file_type=ImageFileTypeEnum.jpg, resolution=get_image_resolution(default_temp), compression=CoverCompressionEnum.high)
@@ -504,7 +504,7 @@ class Downloader:
                 else:
                     lyrics_track_id = track_id
                     extra_kwargs = {}
-                
+
                 if lyrics_track_id:
                     lyrics_info: LyricsInfo = lyrics_module.get_track_lyrics(lyrics_track_id, **extra_kwargs)
                     # if lyrics_info.embedded or lyrics_info.synced:
@@ -546,7 +546,7 @@ class Downloader:
             else:
                 credits_track_id = track_id
                 extra_kwargs = {}
-            
+
             if credits_track_id:
                 credits_list = credits_module.get_track_credits(credits_track_id, **extra_kwargs)
                 # if credits_list:
@@ -562,7 +562,7 @@ class Downloader:
             #     self.print('Credits retrieved')
             # else:
             #     self.print('No credits available')
-        
+
         # Do conversions
         old_track_location, old_container = None, None
         if codec in conversions:
@@ -570,7 +570,7 @@ class Downloader:
             new_codec = conversions[codec]
             new_codec_data = codec_data[new_codec]
             self.print(f'Converting to {new_codec_data.pretty_name}')
-                
+
             if old_codec_data.spatial or new_codec_data.spatial:
                 self.print('Warning: converting spacial formats is not allowed, skipping')
             elif not old_codec_data.lossless and new_codec_data.lossless and not self.global_settings['advanced']['enable_undesirable_conversions']:
@@ -588,11 +588,11 @@ class Downloader:
                 except:
                     conversion_flags = {}
                     self.print('Warning: conversion_flags setting is invalid, using defaults')
-                
+
                 conv_flags = conversion_flags[new_codec] if new_codec in conversion_flags else {}
                 temp_track_location = f'{create_temp_filename()}.{new_codec_data.container.name}'
                 new_track_location = f'{track_location_name}.{new_codec_data.container.name}'
-                
+
                 stream: ffmpeg = ffmpeg.input(track_location, hide_banner=None, y=None)
                 # capture_stderr is required for the error output to be captured
                 try:
@@ -655,7 +655,7 @@ class Downloader:
             self.print('Tagging failed, tags saved to text file')
         if delete_cover:
             silentremove(cover_temp_location)
-        
+
         self.print(f'=== Track {track_id} downloaded ===', drop_level=1)
         return True
 
