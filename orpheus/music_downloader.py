@@ -182,8 +182,10 @@ class Downloader:
         album_tags['explicit'] = ' [E]' if album_info.explicit else ''
         album_tags['artist_initials'] = self._get_artist_initials_from_name(album_info)
 
-        # use first artist as main artist if there are multiple
-        artist_subfolder = album_info.artist.split(', ')[0] + '/' if self.global_settings['formatting']['album_in_artist_folder'] else ''
+        artist_subfolder = ''
+        if self.global_settings['formatting']['album_in_artist_folder'] and self.download_mode is not DownloadTypeEnum.artist:
+            # use first artist as main artist if there are multiple
+            artist_subfolder = album_info.artist.split(', ')[0] + '/'
         album_path = path + artist_subfolder + self.global_settings['formatting']['album_format'].format(**album_tags)
         # fix path byte limit
         album_path = fix_byte_limit(album_path) + '/'
