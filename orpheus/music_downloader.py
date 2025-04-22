@@ -28,7 +28,7 @@ def beauty_format_seconds(seconds: int) -> str:
 
 class Downloader:
     def __init__(self, settings, module_controls, oprinter, path):
-        self.path = path if path.endswith('/') else path + '/' 
+        self.path = path if path.endswith('/') else path + '/'
         self.third_party_modules = None
         self.download_mode = None
         self.service = None
@@ -319,7 +319,7 @@ class Downloader:
                         self.print('Track is a live performance, skipping: ' + track_info.name, drop_level=1)
                         return
                 if self.global_settings['advanced']['skip_remix_tracks']:
-                    if m and re.search(r'[^a-z]remix', match):
+                    if m and re.search(r'[^a-z](remix|rmx|edit)', match):
                         self.print('Track is a remix, skipping: ' + track_info.name, drop_level=1)
                         return
 
